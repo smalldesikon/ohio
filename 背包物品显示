@@ -14,7 +14,7 @@ local rows = {}
 for i = 1, 5 do
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0, 300, 0, 40)
-    label.Position = UDim2.new(0, 20, 0, (i - 1) * 45)
+    label.Position = UDim2.new(0.5, -150, 0.5, -100 + (i - 1) * 45)
     label.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     label.TextColor3 = Color3.new(1, 1, 1)
     label.Font = Enum.Font.SourceSansBold
@@ -95,4 +95,4 @@ if player.Character then
     updateUI()
 end
 
-print("源码公开 请勿商务")
+print("源码公开 请勿商用")
