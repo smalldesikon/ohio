@@ -1,0 +1,180 @@
+--此脚本司空制作 元宝ai协助 永远开源 我爱你们么么哒(●ơ ₃ ơ)♥
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+
+local localPlayer = Players.LocalPlayer
+if not localPlayer then
+    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    localPlayer = Players.LocalPlayer
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "StatusUI"
+screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusLabel"
+statusLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+statusLabel.Position = UDim2.new(0.5, 0, 0.4, 0)
+statusLabel.Size = UDim2.new(0.7, 0, 0.35, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.new(1, 1, 1)
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 36
+statusLabel.TextWrapped = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+statusLabel.Parent = screenGui
+
+task.spawn(function()
+    local fullText = "自动脚本"
+    while true do
+        statusLabel.Text = ""
+        for i = 1, #fullText do
+            statusLabel.Text = string.sub(fullText, 1, i)
+            task.wait(0.2)
+        end
+        task.wait(1)
+    end
+end)
+
+task.wait(1)
+
+print("脚本启动，即将执行开局按键 W 0.1s...")
+VirtualInputManager:SendKeyEvent(true, "W", false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, "W", false, game)
+print("开局按键 W 执行完毕。")
+
+local function tryVaultDoorInteraction()
+    local vaultDoor = Workspace:FindFirstChild("VaultDoor")
+    if vaultDoor then
+        print("检测到 VaultDoor 模型，准备互动...")
+        local pos = vaultDoor:GetPivot().Position + Vector3.new(0.5, 0, 0)
+        local hrp = localPlayer:FindFirstChild("Character") and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            task.wait(0.1)
+        end
+        print("正在 VaultDoor 前方按 E 0.1 秒...")
+        VirtualInputManager:SendKeyEvent(true, "E", false, game)
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, "E", false, game)
+        task.wait(0.1)
+        print("VaultDoor 互动完成，继续执行主流程。")
+        return true
+    else
+        print("未检测到 VaultDoor 模型，跳过特殊互动，继续主流程。")
+        return false
+    end
+end
+
+tryVaultDoorInteraction()
+
+local CONFIG = {
+    SERVER_FETCH_RETRY_DELAY = 0.1,
+    TELEPORT_COOLDOWN = 0.1,
+    FORBIDDEN_ZONE = {
+        center = Vector3.new(352.884155, 13.0287256, -1353.05396),
+        radius = 80
+    },
+}
+local visitedServers = {}
+
+local function getHumanoidRootPart()
+    local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function teleportTo(position)
+    local hrp = getHumanoidRootPart()
+    if hrp and position then
+        hrp.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))
+        task.wait(0.1)
+    end
+end
+
+local function scanForTargets()
+    local found = {}
+    local targets = {
+        "Money Printer", "Military Armory Keycard", "Suitcase Nuke", "Nuke Launcher", "Easter Basket",
+        "Bunny Balloon", "Ghost Balloon", "Clover Balloon", "Bat Balloon", "Gold Clover Balloon",
+        "Golden Rose", "Black Rose", "Heart Balloon", "Blue Candy Cane", "NextBot Grenade",
+        "Void Gem", "Treasure Map", "Dark Matter Gem", "Diamond", "Diamond Ring", "Requirements"
+    }
+    
+    for _, item in ipairs(Workspace:GetDescendants()) do
+        if item:IsA("ProximityPrompt") then
+            local objectText = item.ObjectText
+            for _, target in ipairs(targets) do
+                if objectText == target then
+                    local parent = item:FindFirstAncestorWhichIsA("BasePart")
+                    if parent then
+                        local dist = (parent.Position - CONFIG.FORBIDDEN_ZONE.center).Magnitude
+                        if dist > CONFIG.FORBIDDEN_ZONE.radius then
+                            table.insert(found, {part = parent, prompt = item})
+                        end
+                    end
+                    break
+                end
+            end
+        end
+    end
+    return found
+end
+
+local function fetchServerList()
+    local url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100", game.PlaceId)
+    local req = syn and syn.request or http_request or http and http.request or fluxus and fluxus.request or request or function(u, o) return {StatusCode = 404} end
+    local success, response = pcall(req, {Url = url, Method = "GET", Timeout = 10})
+    if not success or not response or response.StatusCode ~= 200 then return nil end
+    local success2, data = pcall(HttpService.JSONDecode, HttpService, response.Body)
+    if not success2 or not data or not data.data then return nil end
+    local filtered, currentJobId = {}, game.JobId
+    for _, server in ipairs(data.data) do
+        if server.playing < server.maxPlayers and server.id ~= currentJobId and not visitedServers[server.id] then
+            table.insert(filtered, server)
+        end
+    end
+    return filtered
+end
+
+local function mainLoop()
+    while true do
+        local root = getHumanoidRootPart()
+        local targets = scanForTargets()
+        
+        if #targets > 0 then
+            for _, target in ipairs(targets) do
+                if target.part and target.prompt and root then
+                    teleportTo(target.part.Position)
+                    VirtualInputManager:SendKeyEvent(true, "E", false, game)
+                    task.wait(0.1)
+                    VirtualInputManager:SendKeyEvent(false, "E", false, game)
+                    task.wait(0.1)
+                end
+            end
+        else
+            local fetchedServers = fetchServerList()
+            if fetchedServers and #fetchedServers > 0 then
+                visitedServers[fetchedServers[1].id] = true
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, fetchedServers[1].id, localPlayer)
+                task.wait(CONFIG.TELEPORT_COOLDOWN)
+                
+                VirtualInputManager:SendKeyEvent(true, "E", false, game)
+                task.wait(0.1)
+                VirtualInputManager:SendKeyEvent(false, "E", false, game)
+                
+            else
+                task.wait(CONFIG.SERVER_FETCH_RETRY_DELAY)
+            end
+        end
+        task.wait(0.1)
+    end
+end
+
+mainLoop()
