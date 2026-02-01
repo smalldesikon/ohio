@@ -31,7 +31,7 @@ statusLabel.TextYAlignment = Enum.TextYAlignment.Center
 statusLabel.Parent = screenGui
 
 task.spawn(function()
-    local fullText = "自动脚本_xion"
+    local fullText = "自动脚本"
     while true do
         statusLabel.Text = ""
         for i = 1, #fullText do
@@ -143,22 +143,14 @@ local function fetchServerList()
     return filtered
 end
 
+local startTime = tick()
+
 local function mainLoop()
     while true do
-        local root = getHumanoidRootPart()
-        local targets = scanForTargets()
+        local currentTime = tick()
         
-        if #targets > 0 then
-            for _, target in ipairs(targets) do
-                if target.part and target.prompt and root then
-                    teleportTo(target.part.Position)
-                    VirtualInputManager:SendKeyEvent(true, "E", false, game)
-                    task.wait(0.1)
-                    VirtualInputManager:SendKeyEvent(false, "E", false, game)
-                    task.wait(0.1)
-                end
-            end
-        else
+        if currentTime - startTime >= 3 then
+            print("运行已达3秒，强制切换服务器。")
             local fetchedServers = fetchServerList()
             if fetchedServers and #fetchedServers > 0 then
                 visitedServers[fetchedServers[1].id] = true
@@ -168,9 +160,25 @@ local function mainLoop()
                 VirtualInputManager:SendKeyEvent(true, "E", false, game)
                 task.wait(0.1)
                 VirtualInputManager:SendKeyEvent(false, "E", false, game)
-                
             else
                 task.wait(CONFIG.SERVER_FETCH_RETRY_DELAY)
+            end
+        else
+            local root = getHumanoidRootPart()
+            local targets = scanForTargets()
+            
+            if #targets > 0 then
+                for _, target in ipairs(targets) do
+                    if target.part and target.prompt and root then
+                        teleportTo(target.part.Position)
+                        VirtualInputManager:SendKeyEvent(true, "E", false, game)
+                        task.wait(0.1)
+                        VirtualInputManager:SendKeyEvent(false, "E", false, game)
+                        task.wait(0.1)
+                    end
+                end
+            else
+                task.wait(0.1)
             end
         end
         task.wait(0.1)
