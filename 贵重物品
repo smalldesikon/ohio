@@ -31,7 +31,7 @@ statusLabel.TextYAlignment = Enum.TextYAlignment.Center
 statusLabel.Parent = screenGui
 
 task.spawn(function()
-    local fullText = "自动脚本"
+    local fullText = "自动脚本_xion"
     while true do
         statusLabel.Text = ""
         for i = 1, #fullText do
