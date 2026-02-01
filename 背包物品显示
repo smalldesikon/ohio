@@ -1,0 +1,137 @@
+local balloons = {
+    ["Bunny Balloon"] = true,
+    ["Ghost Balloon"] = true,
+    ["Clover Balloon"] = true,
+    ["Bat Balloon"] = true,
+    ["Gold Clover Balloon"] = true,
+    ["Golden Rose"] = true,
+    ["Black Rose"] = true,
+    ["Heart Balloon"] = true
+}
+
+local gems = {
+    ["Void Gem"] = true,
+    ["Dark Matter Gem"] = true,
+    ["Diamond"] = true,
+    ["Diamond Ring"] = true
+}
+
+local moneyPrinters = {
+    ["Money Printer"] = true
+}
+
+local misc = {
+    ["Military Armory Keycard"] = true,
+    ["Suitcase Nuke"] = true,
+    ["Nuke Launcher"] = true,
+    ["Easter Basket"] = true,
+    ["Blue Candy Cane"] = true,
+    ["Blue Candy"] = true
+}
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "InventoryUI"
+screenGui.Parent = playerGui
+
+local rows = {}
+for i = 1, 5 do
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 300, 0, 40)
+    label.Position = UDim2.new(0, 20, 0, (i - 1) * 45)
+    label.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 24
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BorderSizePixel = 1
+    label.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    label.Parent = screenGui
+    rows[i] = label
+end
+
+rows[1].Text = "所有稀有物品：0"
+rows[2].Text = "气球数量：0"
+rows[3].Text = "宝石数量：0"
+rows[4].Text = "印钞机数量：0"
+rows[5].Text = "杂物：0"
+
+local function countItems()
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character or player.CharacterAdded:Wait()
+    
+    local rareCount, balloonCount, gemCount, printerCount, miscCount = 0, 0, 0, 0, 0
+    
+    if backpack then
+        for _, tool in pairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local name = tool.Name
+                if balloons[name] then
+                    balloonCount += 1
+                elseif gems[name] then
+                    gemCount += 1
+                elseif moneyPrinters[name] then
+                    printerCount += 1
+                elseif misc[name] then
+                    miscCount += 1
+                else
+                    rareCount += 1
+                end
+            end
+        end
+    end
+    
+    if character then
+        for _, item in pairs(character:GetChildren()) do
+            if item:IsA("Tool") or item:IsA("Accessory") then
+                local name = item.Name
+                if balloons[name] then
+                    balloonCount += 1
+                elseif gems[name] then
+                    gemCount += 1
+                elseif moneyPrinters[name] then
+                    printerCount += 1
+                elseif misc[name] then
+                    miscCount += 1
+                else
+                    rareCount += 1
+                end
+            end
+        end
+    end
+    
+    return rareCount, balloonCount, gemCount, printerCount, miscCount
+end
+
+local function updateUI()
+    local r, b, g, p, m = countItems()
+    rows[1].Text = "所有稀有物品：" .. r
+    rows[2].Text = "气球数量：" .. b
+    rows[3].Text = "宝石数量：" .. g
+    rows[4].Text = "印钞机数量：" .. p
+    rows[5].Text = "杂物：" .. m
+end
+
+updateUI()
+
+player.Backpack.ChildAdded:Connect(updateUI)
+player.Backpack.ChildRemoved:Connect(updateUI)
+
+player.CharacterAdded:Connect(function(char)
+    char.ChildAdded:Connect(updateUI)
+    char.ChildRemoved:Connect(updateUI)
+    updateUI()
+end)
+
+if player.Character then
+    for _, child in pairs(player.Character:GetChildren()) do
+        if child:IsA("Tool") or child:IsA("Accessory") then
+            child.AncestryChanged:Connect(updateUI)
+        end
+    end
+    updateUI()
+end
+
+print("源码公开 请勿二改用于商务")
