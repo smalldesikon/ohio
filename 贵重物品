@@ -1,4 +1,5 @@
 --此脚本司空制作 元宝ai协助 永远开源 我爱你们么么哒(●ơ ₃ ơ)♥
+--此脚本司空制作 元宝ai协助 永远开源 我爱你们么么哒(●ơ ₃ ơ)♥
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -101,7 +102,7 @@ end
 local function scanForTargets()
     local found = {}
     local targets = {
-        "Money Printer", "Military Armory Keycard", "Suitcase Nuke", "Nuke Launcher", "Easter Basket",
+        "Money Printer", "Suitcase Nuke", "Nuke Launcher", "Easter Basket",
         "Bunny Balloon", "Ghost Balloon", "Clover Balloon", "Bat Balloon", "Gold Clover Balloon",
         "Golden Rose", "Black Rose", "Heart Balloon", "Blue Candy Cane", "NextBot Grenade",
         "Void Gem", "Treasure Map", "Dark Matter Gem", "Diamond", "Diamond Ring", "Requirements"
