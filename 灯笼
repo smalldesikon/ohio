@@ -1,0 +1,147 @@
+-- ==============================================
+-- 功能：弹窗提示 → 遍历Lantern（同高传送+防坠落+按2瞄准+E 2秒+无方块）→ 结束
+-- 核心：传送后固定人物（Anchored=true）防坠落，保持与Lantern Y轴一致
+-- 放置位置：StarterPlayer → StarterPlayerScripts（LocalScript）
+-- ==============================================
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local StarterGui = game:GetService("StarterGui")
+
+-- 获取本地玩家及角色核心部件
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")  -- 用于角色状态管理
+
+-- 角色重生时更新引用+重置防坠落状态
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+    humanoid = character:WaitForChild("Humanoid", 5)
+    if humanoidRootPart then
+        humanoidRootPart.Anchored = false  -- 重生后解除固定，允许正常移动
+        print("[系统] 角色重生完成，已重置防坠落状态")
+    end
+end)
+
+-- 1. 弹窗提示（系统通知）
+local function showPopup()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "脚本启动",
+            Text = "请切换第一人称，然后向上看，脚本完成后等一会即可走动",
+            Duration = 3,
+            Icon = "rbxassetid://7733964719"
+        })
+        print("[弹窗] 已显示启动通知")
+    end)
+end
+
+-- 2. 按2键瞄准（短按0.1秒）
+local function aimWith2()
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+        task.wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Two, false, game)
+        print("[瞄准] 已按2键，屏幕对准当前Lantern（同高防坠落）")
+    end)
+end
+
+-- 3. 识别Lantern（名称含"lantern"，优先BasePart）
+local function findAllLanterns()
+    local lanterns = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if string.find(string.lower(obj.Name), "lantern") then
+            local part = obj:IsA("BasePart") and obj or 
+                        (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
+            if part then table.insert(lanterns, part) end
+        end
+    end
+    return lanterns
+end
+
+-- 4. 按E键2秒（长按交互）
+local function pressE()
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        print("[交互] 开始按住E键（持续2秒）")
+        task.wait(2)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        print("[交互] 已松开E键（持续2秒后）")
+    end)
+end
+
+-- 5. 同高传送+防坠落+交互（核心：固定位置防坠落）
+local function teleportToLantern(lanternPart, index)
+    if not (lanternPart and humanoidRootPart) then
+        warn("[跳过] Lantern/角色部件无效（索引："..index.."）")
+        return false
+    end
+
+    -- 核心：传送至Lantern同高位置（Y轴完全一致）
+    local targetPos = lanternPart.Position  -- 直接取Lantern的Position（Y轴一致）
+    humanoidRootPart.CFrame = CFrame.new(targetPos)
+    print(string.format("[传送] Lantern%02d → 同高防坠落位置: (%.1f, %.1f, %.1f)", 
+        index, targetPos.X, targetPos.Y, targetPos.Z))
+
+    -- 防坠落关键：固定人物位置（Anchored=true，不受重力影响）
+    humanoidRootPart.Anchored = true
+    print("[防坠落] 已固定人物位置，Y轴与Lantern一致")
+
+    -- 按2键瞄准
+    aimWith2()
+    
+    -- 等0.1秒后按E键2秒
+    task.wait(0.1)
+    pressE()
+
+    -- 交互完成：解除固定（允许传送到下一个Lantern时移动）
+    humanoidRootPart.Anchored = false
+    print("[防坠落] 已解除固定，准备传送下一个")
+    
+    task.wait(0.1)  -- 模型间间隔
+    return true
+end
+
+-- 6. 遍历所有Lantern
+local function startLanternTraversal()
+    print("\n===== 开始Lantern处理（同高防坠落模式） =====")
+    local lanterns = findAllLanterns()
+    
+    if #lanterns == 0 then
+        warn("[提示] 未找到Lantern（名称含'lantern'的对象）")
+        return
+    end
+
+    print(string.format("[信息] 找到 %d 个Lantern，开始处理...", #lanterns))
+    for i, lanternPart in ipairs(lanterns) do
+        print(string.format("\n----- 处理Lantern %d/%d（同高防坠落）-----", i, #lanterns))
+        teleportToLantern(lanternPart, i)
+    end
+
+    print("\n===== 所有Lantern处理完成！共处理 "..#lanterns.." 个 =====")
+end
+
+-- 启动逻辑（弹窗→防坠落处理Lantern）
+task.spawn(function()
+    -- 阶段1：弹窗
+    showPopup()
+    task.wait(1)  -- 弹窗显示后稍等1秒
+
+    -- 阶段2：检查角色加载
+    if not humanoidRootPart then
+        humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10)
+    end
+    if not humanoidRootPart then
+        warn("[错误] 角色未加载HumanoidRootPart，无法传送")
+        return
+    end
+
+    -- 阶段3：执行防坠落Lantern遍历
+    startLanternTraversal()
+    
+    -- 阶段4：全部完成后确保解除固定（允许正常移动）
+    humanoidRootPart.Anchored = false
+    print("[收尾] 所有处理完成，已解除固定，可正常移动")
+end)
